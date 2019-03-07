@@ -31,7 +31,7 @@ struct Cli {
 }
 
 fn main() {
-  let _api = "xxxxYOUR API KEY HERExxxxxxx"; //<--- WAB KEY
+  let _api = "xxxxYOUR API KEY HERExxxxxxx";
   let domains = vec![ 
     "internaldomain.com".to_string(),
     "internaldomain.com".to_string(), 
