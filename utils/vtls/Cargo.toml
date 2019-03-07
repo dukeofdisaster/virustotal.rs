@@ -1,0 +1,18 @@
+[package]
+name = "vtls"
+version = "0.1.1"
+authors = ["Chihiro Hasegawa <pgm3rdlinuxor1000@gmail.com>", "Josh Ortiz <ortizzlejay@gmail.com"]
+license = "MIT"
+description = "a url scanning utility based on owlinux1000's library for VirusTotal Public API 2.0"
+repository = "https://github.com/dukeofdisaster/virustotal.rs"
+readme = "README.md"
+keywords = ["rust", "virustotal"]
+
+[dependencies]
+colored = "1.7"
+chrono = "0.4"
+reqwest = "0.8.5"
+serde = "1.0"
+serde_json = "1.0"
+serde_derive = "1.0"
+structopt = "0.2.10"
