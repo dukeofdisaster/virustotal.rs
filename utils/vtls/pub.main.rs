@@ -1,10 +1,11 @@
 /* building out SOC scripts with rust ftw
-WARNING: 
 TODO:
-  - add option for auto-submitting all urls
-
+  - add option for auto-submitting all urls (to have fresh date)
+  - add option for json output like vthashes util
 NOTE: 
   - structopt args are required unless eplicitly specified otherwise
+  - this can be easily modified by keeping a count of how many api calls have been made
+  - then sleeping to stay within bounds if you're testing out the free tier
 */
 
 extern crate colored;
