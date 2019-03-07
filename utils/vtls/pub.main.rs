@@ -1,11 +1,12 @@
 /* building out SOC scripts with rust ftw
+WARNING: 
 TODO:
-  - add option for auto-submitting all urls (to have fresh date)
-  - add option for json output like vthashes util
+  - add option for auto-submitting all urls
+  - add option for file hashes
+
 NOTE: 
   - structopt args are required unless eplicitly specified otherwise
-  - this can be easily modified by keeping a count of how many api calls have been made
-  - then sleeping to stay within bounds if you're testing out the free tier
+  - SO FAR WILL BREAK IF IT GETS AN EMPTY LINE
 */
 
 extern crate colored;
@@ -17,7 +18,7 @@ use chrono::prelude::*;
 use vtls::*;
 use std::fs;
 // Below used to force sleeping to make free api happy
-//use std::{ thread, time, panic };
+// use std::{ thread, time, panic };
 
 // for args; add more as needed
 use structopt::StructOpt;
@@ -30,10 +31,11 @@ struct Cli {
 }
 
 fn main() {
-  let _api = "xxxxINSERT YOUR API KEY HERExxxxx"
-  let domains = vec!["HERE YOU'D INSERT A LIST OF YOUR INTERNAL DOMAINS".to_string(), 
-    "domain2".to_string(),
-    "domain3".to_string()];
+  let _api = "xxxxYOUR API KEY HERExxxxxxx"; //<--- WAB KEY
+  let domains = vec![ 
+    "internaldomain.com".to_string(),
+    "internaldomain.com".to_string(), 
+    "otherdomain.com".to_string()];
 
   // Get our args
   let args = Cli::from_args();
@@ -61,11 +63,14 @@ fn main() {
   // we need a second count to see if we're at 4 urls, that way we can sleep
   //let mut count2 = 1;
   for i in lines {
+    // We should check for empty lines and remove them
     
     // sanitize our input; trim as needed and replace any identifying info
     // like our domain. This variable needs to be mutable
     let mut tmpline = i.replace("\"", "");
     
+    // remove whitespace
+    tmpline = tmpline.replace(" ", "");
     //println!("{}", tmpline);
 
     // We have to sleep here if we're on a free tier api
@@ -153,10 +158,24 @@ fn get_artifacts(api: &str, url: &str) {
     //println!("Thread done sleeping");
     let id = &scan.scan_id.unwrap();
     //println!("ID: {}", id); 
-    let fresh_report = url::report(api, id); //&scan.scan_id.unwrap());
-    printresults(fresh_report);
-    println!("{} {}", "Scanned item => ".bright_green(), url.bright_green());
-    println!("========");
+    let mut fresh_report = url::report(api, id); //&scan.scan_id.unwrap());
+
+    // Deals with waiting for the scan to be done
+    while fresh_report.permalink.is_none() {
+      fresh_report = url::report(api, id);
+    }
+    // Should never get here... 
+    if fresh_report.permalink.is_none() {
+      println!("{}", "NO RESULTS".bright_red());
+      println!("{} {}", "Scanned item => ".bright_green(), url.bright_green());
+      println!("{}", fresh_report.verbose_msg.bright_red());
+      println!("========");
+    }
+    else{
+      printresults(fresh_report);
+      println!("{} {}", "Scanned item => ".bright_green(), url.bright_green());
+      println!("========");
+    }
     //println!("^^^^^ SCAN FAILOVER TEST ^^^^");
   }
   else {
@@ -164,7 +183,7 @@ fn get_artifacts(api: &str, url: &str) {
     // extracting the date string hear avoids the move error... 
     // this actually makes more sense... we should grab the string only
     // if we know it exists, thus we should only grab it after the variable res 
-    // undergoes the validation in the if statement above... DUH!
+    // undergoes the validation in the if statement above
     let datestr = &res.scan_date.unwrap();
     if gooddate(&datestr) {
       let rep = url::report(api,url);
