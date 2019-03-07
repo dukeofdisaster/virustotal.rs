@@ -36,6 +36,9 @@ fn main() {
 }
 ```
 
+## Building one of the utilites
+Just swap out the main Cargo.toml file with that of the utility you want and move pub.main.rs to src/ as main.rs then cargo run
+
 ## Acknowledgements
 
 * [Thanks virustotal.com for posting](https://support.virustotal.com/hc/en-us/articles/115002146469-API-Scripts)
