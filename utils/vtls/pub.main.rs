@@ -1,5 +1,4 @@
-/* building out SOC scripts with rust ftw
-WARNING: 
+/* Added loops for waiting
 TODO:
   - add option for auto-submitting all urls
   - add option for file hashes
@@ -7,6 +6,10 @@ TODO:
 NOTE: 
   - structopt args are required unless eplicitly specified otherwise
   - SO FAR WILL BREAK IF IT GETS AN EMPTY LINE
+  - Doesn't take into account the case where url's are submitted that 
+    contain information that could be tied to a username; i.e /ahg=XDjdfjsdfk12321
+    where somehow that's tied to the username... I fail to see how that's
+    concerning, since there usually isn't a clear cut
 */
 
 extern crate colored;
@@ -31,10 +34,11 @@ struct Cli {
 }
 
 fn main() {
-  let _api = "xxxxYOUR API KEY HERExxxxxxx";
+  let _api = "YOUR API KEY HERE";
   let domains = vec![ 
-    "internaldomain.com".to_string(),
-    "internaldomain.com".to_string(), 
+    "someinternaldomaintosanitize.com".to_string(),
+    "someinternaldomaintosanitize.org".to_string(), 
+    "anotherinternaldomain.net".to_string(),
     "otherdomain.com".to_string()];
 
   // Get our args
@@ -54,7 +58,7 @@ fn main() {
   let count = lines.len();
   println!("COUNT => {}", count);
   
-  // - comment out for prod release
+  // - Can use a count if you're working on free tier api
  /* 
   if count > 4 {
     println!("URL length greater than 4; sleeping 60 seconds every 4 urls");
@@ -63,13 +67,11 @@ fn main() {
   // we need a second count to see if we're at 4 urls, that way we can sleep
   //let mut count2 = 1;
   for i in lines {
-    // We should check for empty lines and remove them
-    
+    // We should check for empty lines and remove them. 
     // sanitize our input; trim as needed and replace any identifying info
     // like our domain. This variable needs to be mutable
     let mut tmpline = i.replace("\"", "");
     
-    // remove whitespace
     tmpline = tmpline.replace(" ", "");
     //println!("{}", tmpline);
 
@@ -82,13 +84,10 @@ fn main() {
     }
     count2 += 1; */
 
-    // here we borrow domains; & == borrow
     for j in &domains {
       if i.contains(j) {
-        // uncomment below for testing
         //println!("Found hit for internal domain ^^^^");
         tmpline = tmpline.replace(j, "TEST");
-        // uncomment below for testing
         println!("SANITIZED URL ==> {}", tmpline);
       }
     }
@@ -97,7 +96,6 @@ fn main() {
     // perspective because we check each username against the URL
     // however this guarantees that there are no username hits AND
     // the performance hit is neglible on the compiled binary
-    // (at least with our number of users: ~3.1K)
     for username in &users_vec {
       if tmpline.contains(username) {
         // redact the username
@@ -107,7 +105,7 @@ fn main() {
       }
     } 
 
-    // If the username doesn't have an http protocol identifier
+    // If the url doesn't have an http protocol identifier
     // insert it
     if !i.contains("http") {
       //println!("url doesn't have http://");
@@ -120,7 +118,6 @@ fn main() {
       protocol.push_str(&tmpline);
       tmpline = protocol;
       //println!("PROTOCOL ADDITION TEST ++++++ > {}", tmpline); 
-      //panic!();
     }
     // Finally... get all the artifacts
     get_artifacts(_api, &tmpline);
@@ -147,15 +144,11 @@ fn get_artifacts(api: &str, url: &str) {
     //println!("scan initialized");
     //println!("Scan id: {:?}", &scan.scan_id.unwrap());
 
-    // NEED: Error checking here; this often returns an Err, in which case we should probably
-    //       loop until we get an Ok
-    //
-    //sleep here too allow the scan to process;
-    // increased to 15 seconds because scan timing is inconsistent
-    // NOTE: no date validation is needed herer since a scan submission
-    // will always return a present date
-    //thread::sleep(time::Duration::from_secs(45));
-    //println!("Thread done sleeping");
+    while scan.scan_id.is_none(){
+      // We don't need to do anything here, we just need to wait for the value
+      // to get initialized;
+      continue;
+    } 
     let id = &scan.scan_id.unwrap();
     //println!("ID: {}", id); 
     let mut fresh_report = url::report(api, id); //&scan.scan_id.unwrap());
@@ -190,6 +183,42 @@ fn get_artifacts(api: &str, url: &str) {
       printresults(rep);
       println!("{} {}", "Scanned item => ".bright_green(), url.bright_green());
       println!("========");
+    } // 20190314: had to account for this which we never did
+    else {
+      println!("STALE SCAN... Submitting for rescan");
+
+      // NOTE: needed to adjsut the scan date here
+      // for some reason scan date is still the old date even though we
+      // resubmitted it
+      let scan = url::scan(api, url);
+      while scan.scan_id.is_none(){
+        continue;
+      }
+      let id = &scan.scan_id.unwrap();
+      let mut fresh_report = url::report(api, id); //&scan.scan_id.unwrap());
+
+      // Deals with waiting for the scan to be done
+      // may try making this a continue loop as well... would need to check api stats..
+      // ... may sometimes error out on high volumes of URLS
+      while fresh_report.permalink.is_none() {
+        fresh_report = url::report(api, id);
+      }
+      while !gooddate(&fresh_report.scan_date.unwrap()) {
+        fresh_report = url::report(api,id);
+      }
+      let good_report = url::report(api,id); 
+      // Should never get here... 
+      if fresh_report.permalink.is_none() {
+        println!("{}", "NO RESULTS".bright_red());
+        println!("{} {}", "Scanned item => ".bright_green(), url.bright_green());
+        println!("{}", fresh_report.verbose_msg.bright_red());
+        println!("========");
+      }
+      else{
+        printresults(good_report);
+        println!("{} {}", "Scanned item => ".bright_green(), url.bright_green());
+        println!("========");
+      }
     }
   }
 }
@@ -218,8 +247,8 @@ fn gooddate(date: &str) -> bool {
   let yearnum = yearstr.parse::<i32>().expect("Failed to parse yearstr");
   let monthnum = monthstr.parse::<u32>().expect("Failed to parse monthstr");
 
-  // this is currently unused... will debate with team whether or not
-  // we care about day as long as it was in current month
+  // this is currently unused... can add in if you care about being within
+  // a certain amount of days
   //let daynum = daystr.parse::<u32>().expect("Failed to parse dasytr");
   //println!("Goddate yearnum: {}\ncurrentyear(): {}", yearnum, currentyear());
   if yearnum == currentyear() && monthnum == currentmonth() {
