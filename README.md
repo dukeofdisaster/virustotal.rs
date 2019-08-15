@@ -37,7 +37,16 @@ fn main() {
 ```
 
 ## Building one of the utilites
-Just swap out the main Cargo.toml file with that of the utility you want and move pub.main.rs to src/ as main.rs then cargo run
+You should consider updating the versions numbers in the Cargo.toml of the utilities.
+Last tested running this with 20190815. Note that this is for v2; virsutotal is already on v3
+
+1. from the cloned directory run
+  - cp utils/vtls/Cargo.toml .
+2. Copy the pub.main.rs into src so cargo can find it later
+  - cp utils/vtls/pub.main.rs src/main.rs
+3. Add your API key into src/main.rs
+4. Run the bin
+  - cargo run
 
 ## Acknowledgements
 
