@@ -40,13 +40,27 @@ fn main() {
 You should consider updating the versions numbers in the Cargo.toml of the utilities.
 Last tested running this with 20190815. Note that this is for v2; virsutotal is already on v3
 
-1. from the cloned directory run
-  - cp utils/vtls/Cargo.toml .
-2. Copy the pub.main.rs into src so cargo can find it later
-  - cp utils/vtls/pub.main.rs src/main.rs
+1. from the cloned root directory, copy a util Cargo.toml file to overwrite the main
+```
+cp utils/vtls/Cargo.toml .
+```
+2. Copy the pub.main.rs into src as main.rs so cargo can find it when you build the tool
+```
+cp utils/vtls/pub.main.rs src/main.rs
+```
 3. Add your API key into src/main.rs
 4. Run the bin
-  - cargo run
+```
+cargo run -- somefileofurls.txt somefileofusernames.txt
+```
+
+## ISSUES
+currently panicks on unseen url; something changed in the response; does with file of known urls.
+Already outdated; should work on new client for virustotal api v3.
+
+## TODO
+Update utility Cargo.toml files to reflect current dependencies i.e. version 0.8 -> 0.9 etc
+
 
 ## Acknowledgements
 
